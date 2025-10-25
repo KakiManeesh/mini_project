@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import NewsCard from "@/components/NewsCard";
@@ -21,6 +21,11 @@ interface Article {
 export default function Index() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch top news on component mount
+  useEffect(() => {
+    handleSearch("latest", "general");
+  }, []);
 
   const handleSearch = async (query: string, category: string) => {
     setIsLoading(true);
@@ -79,13 +84,6 @@ export default function Index() {
           </div>
         )}
 
-        {!isLoading && articles.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-lg text-muted-foreground">
-              Search for news to see AI-verified results
-            </p>
-          </div>
-        )}
       </main>
     </div>
   );

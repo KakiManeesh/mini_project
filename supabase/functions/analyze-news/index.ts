@@ -21,13 +21,22 @@ serve(async (req) => {
 
     console.log(`Fetching news for query: "${query}", category: "${category}"`);
 
-    // Fetch news from NewsAPI
-    const newsUrl = new URL("https://newsapi.org/v2/everything");
-    newsUrl.searchParams.append("q", query);
+    // Fetch news from NewsAPI - use top-headlines for better results
+    const newsUrl = category === "general" && query === "latest"
+      ? new URL("https://newsapi.org/v2/top-headlines")
+      : new URL("https://newsapi.org/v2/everything");
+    
+    if (category === "general" && query === "latest") {
+      newsUrl.searchParams.append("country", "us");
+      newsUrl.searchParams.append("pageSize", "3");
+    } else {
+      newsUrl.searchParams.append("q", query);
+      newsUrl.searchParams.append("sortBy", "publishedAt");
+      newsUrl.searchParams.append("pageSize", "10");
+    }
+    
     newsUrl.searchParams.append("apiKey", NEWS_API_KEY);
     newsUrl.searchParams.append("language", "en");
-    newsUrl.searchParams.append("sortBy", "publishedAt");
-    newsUrl.searchParams.append("pageSize", "10");
 
     const newsResponse = await fetch(newsUrl.toString());
     const newsData = await newsResponse.json();
