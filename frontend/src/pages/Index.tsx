@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import NewsCard from "@/components/NewsCard";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -32,11 +31,19 @@ export default function Index() {
     setArticles([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-news", {
-        body: { query, category },
+      const response = await fetch("http://localhost:3002/api/analyze-news", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query, category }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data?.articles && data.articles.length > 0) {
         setArticles(data.articles);
