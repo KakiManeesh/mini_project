@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useRegion } from "@/hooks/use-region";
+import LanguageSelector from "./LanguageSelector";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -48,6 +49,9 @@ export default function Navbar() {
               <MapPin className={`h-4 w-4 ${region === "indian" ? "text-primary" : "text-muted-foreground"}`} />
             </div>
           </div>
+
+          {/* Language Selector */}
+          <LanguageSelector />
 
           <Button
             variant="outline"

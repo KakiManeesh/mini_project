@@ -1,0 +1,81 @@
+{
+  "nav": {
+    "home": "Home",
+    "login": "Login",
+    "backToHome": "Back to Home"
+  },
+  "hero": {
+    "tagline": "AI-Powered News Intelligence",
+    "title": "Discover Truth in",
+    "titleHighlight": "Every Story",
+    "subtitle": "AI-verified news summaries with credibility scores from multiple sources",
+    "searchPlaceholder": "Search any topic... (e.g., AI ethics, climate change)",
+    "searchButton": "Search News",
+    "searching": "Analyzing..."
+  },
+  "categories": {
+    "technology": "Technology",
+    "business": "Business",
+    "entertainment": "Entertainment",
+    "health": "Health",
+    "science": "Science",
+    "sports": "Sports",
+    "general": "General"
+  },
+  "search": {
+    "searchWithin": "Search within",
+    "searchButton": "Search",
+    "searching": "Searching...",
+    "findTopics": "Find specific topics within"
+  },
+  "news": {
+    "latestNews": "Latest AI-Verified News",
+    "articlesAnalyzed": "articles analyzed and verified by AI for accuracy and credibility",
+    "noNewsFound": "No News Found",
+    "noNewsDescription": "Try searching for a different topic or check your internet connection.",
+    "refreshNews": "Refresh News",
+    "readMore": "Read More",
+    "sources": "Sources",
+    "published": "Published on",
+    "analysisBy": "Analysis by NewsSense AI"
+  },
+  "category": {
+    "news": "News",
+    "articles": "Articles",
+    "loading": "Loading",
+    "analyzing": "AI is analyzing the latest"
+  },
+  "loading": {
+    "analyzingNews": "Analyzing Latest News",
+    "processing": "AI is processing articles from multiple sources for accuracy and credibility...",
+    "loadingNews": "Loading News",
+    "searching": "Searching..."
+  },
+  "messages": {
+    "foundArticles": "Found verified articles",
+    "noArticles": "No articles found for this search",
+    "searchResults": "search results for",
+    "latest": "latest"
+  },
+  "errors": {
+    "failedToFetch": "Failed to fetch news",
+    "tryAgain": "Try a different category or check your internet connection.",
+    "goHome": "Go Home"
+  },
+  "regions": {
+    "global": "Global",
+    "indian": "Indian"
+  },
+  "modal": {
+    "completeArticle": "Complete Article",
+    "articleContent": "Article Content",
+    "aiSummary": "AI Summary & Analysis",
+    "aiCredibility": "AI Credibility Analysis",
+    "credibilityAnalysis": "This content has been evaluated by NewsSense AI and scored",
+    "credibilityPercent": "credibility based on source reliability, content quality, and factual presentation.",
+    "sources": "Sources",
+    "visitSource": "Visit Source",
+    "fullContentNotAvailable": "Full content not available from this source. Please visit the original article links below for the complete story.",
+    "previewContent": "This appears to be a preview. For the complete article, please visit the source links below."
+  }
+}

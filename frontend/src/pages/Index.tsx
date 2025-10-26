@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import NewsCard from "@/components/NewsCard";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useRegion } from "@/hooks/use-region";
+import { useLanguage } from "@/hooks/use-language";
 
 interface Article {
   title: string;
@@ -22,13 +23,9 @@ export default function Index() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { region } = useRegion();
+  const { language } = useLanguage();
 
-  // Fetch top news on component mount
-  useEffect(() => {
-    handleSearch("latest", "general");
-  }, [region]);
-
-  const handleSearch = async (query: string, category: string) => {
+  const handleSearch = useCallback(async (query: string, category: string) => {
     setIsLoading(true);
     setArticles([]);
 
@@ -38,7 +35,7 @@ export default function Index() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query, category, region }),
+        body: JSON.stringify({ query, category, region, language }),
       });
 
       if (!response.ok) {
@@ -59,7 +56,12 @@ export default function Index() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [region, language]);
+
+  // Fetch top news on component mount and when region changes
+  useEffect(() => {
+    handleSearch("latest", "general");
+  }, [handleSearch]);
 
   return (
     <div className="min-h-screen bg-background">

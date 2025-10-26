@@ -1,13 +1,7 @@
-import { Search, Newspaper } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import CategoryButtons from "./CategoryButtons";
+import SearchBar from "./SearchBar";
 
 interface HeroProps {
   onSearch: (query: string, category: string) => void;
@@ -25,11 +19,7 @@ const categories = [
 ];
 
 export default function Hero({ onSearch, isLoading }: HeroProps) {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const query = formData.get("query") as string;
-    const category = formData.get("category") as string;
+  const handleSearch = (query: string, category: string) => {
     onSearch(query, category);
   };
 
@@ -48,45 +38,24 @@ export default function Hero({ onSearch, isLoading }: HeroProps) {
           </span>
         </h1>
 
-        <p className="mb-10 text-lg text-muted-foreground sm:text-xl">
+        <p className="mb-8 text-lg text-muted-foreground sm:text-xl">
           AI-verified news summaries with credibility scores from multiple sources
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="query"
-                placeholder="Search any topic... (e.g., AI ethics, climate change)"
-                className="h-12 pl-10 text-base"
-                required
-              />
-            </div>
+        {/* Category Navigation Buttons */}
+        <div className="mb-10">
+          <CategoryButtons categories={categories} />
+        </div>
 
-            <Select name="category" defaultValue="technology">
-              <SelectTrigger className="h-12 w-full sm:w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full sm:w-auto"
-            disabled={isLoading}
-          >
-            {isLoading ? "Analyzing..." : "Search News"}
-          </Button>
-        </form>
+        {/* Search Bar */}
+        <div className="mb-8">
+          <SearchBar
+            onSearch={handleSearch}
+            category="general"
+            isLoading={isLoading}
+            placeholder="Search any topic... (e.g., AI ethics, climate change)"
+          />
+        </div>
       </div>
     </section>
   );

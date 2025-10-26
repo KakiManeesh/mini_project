@@ -36,7 +36,7 @@ const Article = mongoose.model('Article', articleSchema);
 // API route for analyzing news
 app.post('/api/analyze-news', async (req, res) => {
   try {
-    const { query, category, region = "global" } = req.body;
+    const { query, category, region = "global", language = "en" } = req.body;
     const NEWS_API_KEY = process.env.NEWS_API_KEY;
     const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -80,9 +80,9 @@ app.post('/api/analyze-news', async (req, res) => {
         console.log("Trying GNews API first...");
         let gnewsUrl;
         if (category === "general" && query === "latest") {
-          gnewsUrl = `https://gnews.io/api/v4/top-headlines?token=${GNEWS_API_KEY}&country=${country}&max=10&lang=en`;
+          gnewsUrl = `https://gnews.io/api/v4/top-headlines?token=${GNEWS_API_KEY}&country=${country}&max=10&lang=${language}`;
         } else {
-          gnewsUrl = `https://gnews.io/api/v4/search?token=${GNEWS_API_KEY}&q=${query}&max=10&lang=en`;
+          gnewsUrl = `https://gnews.io/api/v4/search?token=${GNEWS_API_KEY}&q=${query}&max=10&lang=${language}`;
         }
 
         const gnewsResponse = await axios.get(gnewsUrl);
@@ -172,7 +172,7 @@ app.post('/api/analyze-news', async (req, res) => {
       // Try GNews India search first
       if (useGNews) {
         try {
-          const indiaGnewsUrl = `https://gnews.io/api/v4/search?token=${GNEWS_API_KEY}&q=india&max=10&lang=en`;
+          const indiaGnewsUrl = `https://gnews.io/api/v4/search?token=${GNEWS_API_KEY}&q=india&max=10&lang=${language}`;
           const indiaGnewsResponse = await axios.get(indiaGnewsUrl);
 
           if (indiaGnewsResponse.status === 200 && indiaGnewsResponse.data.articles && indiaGnewsResponse.data.articles.length > 0) {
