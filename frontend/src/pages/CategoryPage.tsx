@@ -43,7 +43,7 @@ export default function CategoryPage({ category }: CategoryPageProps) {
     setArticles([]);
 
     try {
-      const response = await fetch("http://localhost:3002/api/analyze-news", {
+      const response = await fetch("http://localhost:5002/api/analyze-news", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

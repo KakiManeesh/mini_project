@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 dotenv.config();
 
@@ -14,12 +16,17 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    console.log('Continuing without database connection...');
-  });
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => {
+      console.error('MongoDB connection error:', err.message);
+      console.log('Continuing without database connection...');
+    });
+} else {
+  console.log('MONGODB_URI not found. Server will run but authentication features will not work.');
+  console.log('Please create a .env file in the backend directory with MONGODB_URI.');
+}
 
 // Article schema for MongoDB
 const articleSchema = new mongoose.Schema({
@@ -32,6 +39,112 @@ const articleSchema = new mongoose.Schema({
 });
 
 const Article = mongoose.model('Article', articleSchema);
+
+// User schema for authentication
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+}, { timestamps: true });
+
+const User = mongoose.model('User', userSchema);
+
+// Authentication routes
+
+// Sign up
+app.post('/api/register', async (req, res) => {
+  try {
+    // Check if database is connected
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: 'Database not available. Please configure MONGODB_URI in .env file' });
+    }
+
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'User registered successfully',
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message || 'Failed to register user' });
+  }
+});
+
+// Log in
+app.post('/api/login', async (req, res) => {
+  try {
+    // Check if database is connected
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: 'Database not available. Please configure MONGODB_URI in .env file' });
+    }
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message || 'Failed to login' });
+  }
+});
 
 // API route for analyzing news
 app.post('/api/analyze-news', async (req, res) => {
@@ -106,8 +219,8 @@ app.post('/api/analyze-news', async (req, res) => {
                   // Extract article content from HTML (simple extraction)
                   const html = articleResponse.data;
                   const contentMatch = html.match(/<article[^>]*>(.*?)<\/article>/s) ||
-                                    html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/s) ||
-                                    html.match(/<p[^>]*>(.*?)<\/p>/s);
+                    html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/s) ||
+                    html.match(/<p[^>]*>(.*?)<\/p>/s);
 
                   if (contentMatch && contentMatch[1]) {
                     // Clean HTML and get text content
@@ -221,91 +334,15 @@ app.post('/api/analyze-news', async (req, res) => {
     const processedArticles = [];
 
     for (const article of newsData.articles.slice(0, 6)) {
-      try {
-        // Create prompt for Gemini
-        const prompt = `Analyze this news article and provide:
-1. A concise 2-3 sentence summary
-2. A credibility score from 0-100 based on:
-   - Source reliability (${article.source.name})
-   - Content quality and factual tone
-   - Presence of citations or verifiable claims
-
-Article Title: ${article.title}
-Source: ${article.source.name}
-Content: ${article.description || article.content || "No content available"}
-
-Respond in JSON format:
-{
-  "summary": "your summary here",
-  "credibility": 85,
-  "reasoning": "brief explanation"
-}`;
-
-        // Call Gemini API
-        const geminiResponse = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 500,
-            },
-          }
-        );
-
-        const geminiData = geminiResponse.data;
-
-        if (!geminiData.candidates || geminiData.candidates.length === 0) {
-          processedArticles.push({
-            title: article.title,
-            summary: article.description || "No summary available",
-            credibility: 70,
-            sources: [{ name: article.source.name, url: article.url }],
-            category: category,
-            publishedAt: article.publishedAt,
-          });
-          continue;
-        }
-
-        const responseText = geminiData.candidates[0].content.parts[0].text;
-        
-        // Extract JSON from response
-        let aiAnalysis;
-        try {
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            aiAnalysis = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error("No JSON found in response");
-          }
-        } catch (parseError) {
-          aiAnalysis = {
-            summary: article.description || "No summary available",
-            credibility: 70,
-          };
-        }
-
-        processedArticles.push({
-          title: article.title,
-          content: article.description || article.content || "No content available",
-          summary: aiAnalysis.summary,
-          credibility: Math.min(100, Math.max(0, aiAnalysis.credibility || 70)),
-          sources: [{ name: article.source.name, url: article.url }],
-          category: category,
-          publishedAt: article.publishedAt,
-        });
-      } catch (articleError) {
-        console.error(`Error processing article "${article.title}":`, articleError);
-        processedArticles.push({
-          title: article.title,
-          content: article.description || article.content || "Content unavailable",
-          summary: article.description || "Summary unavailable",
-          credibility: 65,
-          sources: [{ name: article.source.name, url: article.url }],
-          category: category,
-          publishedAt: article.publishedAt,
-        });
-      }
+      processedArticles.push({
+        title: article.title,
+        content: article.description || article.content || "Content unavailable",
+        summary: article.description || "Summary unavailable",
+        credibility: 65,
+        sources: [{ name: article.source.name, url: article.url }],
+        category: category,
+        publishedAt: article.publishedAt,
+      });
     }
 
     console.log(`Successfully processed ${processedArticles.length} articles`);

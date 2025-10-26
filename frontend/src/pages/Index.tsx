@@ -30,7 +30,7 @@ export default function Index() {
     setArticles([]);
 
     try {
-      const response = await fetch("http://localhost:3002/api/analyze-news", {
+      const response = await fetch("http://localhost:5002/api/analyze-news", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,7 +67,7 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Hero onSearch={handleSearch} isLoading={isLoading} />
-      
+
       <main className="container mx-auto px-4 py-12">
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">

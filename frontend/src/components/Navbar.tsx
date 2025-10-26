@@ -1,16 +1,27 @@
-import { Newspaper, LogIn, Globe, MapPin } from "lucide-react";
+import { Newspaper, LogIn, LogOut, Globe, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useRegion } from "@/hooks/use-region";
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import LanguageSelector from "./LanguageSelector";
+import { toast } from "sonner";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { region, setRegion } = useRegion();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleRegionToggle = (checked: boolean) => {
     setRegion(checked ? "indian" : "global");
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/");
   };
 
   return (
@@ -53,14 +64,39 @@ export default function Navbar() {
           {/* Language Selector */}
           <LanguageSelector />
 
-          <Button
-            variant="outline"
-            onClick={() => navigate("/auth")}
-            className="gap-2"
-          >
-            <LogIn className="h-4 w-4" />
-            Login
-          </Button>
+          {isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline">{user.name}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>{user.email}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => navigate("/auth")}
+              className="gap-2"
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </Button>
+          )}
         </div>
       </div>
     </nav>
