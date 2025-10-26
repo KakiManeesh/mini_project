@@ -49,6 +49,39 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// Bookmark schema
+const bookmarkSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  article: {
+    title: String,
+    summary: String,
+    credibility: Number,
+    sources: [{ name: String, url: String }],
+    category: String,
+    publishedAt: String,
+    content: String,
+  },
+}, { timestamps: true });
+
+const Bookmark = mongoose.model('Bookmark', bookmarkSchema);
+
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
 // Authentication routes
 
 // Sign up
@@ -351,6 +384,105 @@ app.post('/api/analyze-news', async (req, res) => {
   } catch (error) {
     console.error("Error in analyze-news:", error);
     res.status(500).json({ error: error.message || "Internal server error" });
+  }
+});
+
+// Bookmark routes
+// Add bookmark
+app.post('/api/bookmarks', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: 'Database not available' });
+    }
+
+    const { article } = req.body;
+    const userId = req.userId;
+
+    // Check if bookmark already exists
+    const existingBookmark = await Bookmark.findOne({
+      userId,
+      'article.title': article.title
+    });
+
+    if (existingBookmark) {
+      return res.status(400).json({ error: 'Article already bookmarked' });
+    }
+
+    const bookmark = new Bookmark({
+      userId,
+      article,
+    });
+
+    await bookmark.save();
+    res.json({ message: 'Article bookmarked successfully', bookmark });
+  } catch (error) {
+    console.error('Bookmark error:', error);
+    res.status(500).json({ error: error.message || 'Failed to bookmark article' });
+  }
+});
+
+// Get all bookmarks for user
+app.get('/api/bookmarks', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: 'Database not available' });
+    }
+
+    const userId = req.userId;
+    const bookmarks = await Bookmark.find({ userId }).sort({ createdAt: -1 });
+
+    const articles = bookmarks.map(bookmark => bookmark.article);
+    res.json({ articles });
+  } catch (error) {
+    console.error('Get bookmarks error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get bookmarks' });
+  }
+});
+
+// Remove bookmark
+app.delete('/api/bookmarks/:id', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: 'Database not available' });
+    }
+
+    const bookmark = await Bookmark.findById(req.params.id);
+
+    if (!bookmark) {
+      return res.status(404).json({ error: 'Bookmark not found' });
+    }
+
+    if (bookmark.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await Bookmark.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Bookmark removed successfully' });
+  } catch (error) {
+    console.error('Remove bookmark error:', error);
+    res.status(500).json({ error: error.message || 'Failed to remove bookmark' });
+  }
+});
+
+// Check if article is bookmarked
+app.post('/api/bookmarks/check', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.json({ isBookmarked: false });
+    }
+
+    const { articleTitle } = req.body;
+    const userId = req.userId;
+
+    const bookmark = await Bookmark.findOne({
+      userId,
+      'article.title': articleTitle
+    });
+
+    res.json({ isBookmarked: !!bookmark, bookmarkId: bookmark?._id });
+  } catch (error) {
+    console.error('Check bookmark error:', error);
+    res.json({ isBookmarked: false });
   }
 });
 

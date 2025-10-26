@@ -1,4 +1,4 @@
-import { Newspaper, LogIn, LogOut, Globe, MapPin, User } from "lucide-react";
+import { Newspaper, LogIn, LogOut, Globe, MapPin, User, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
@@ -77,6 +77,10 @@ export default function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                  <Bookmark className="mr-2 h-4 w-4" />
+                  <span>My Bookmarks</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <User className="mr-2 h-4 w-4" />
                   <span>{user.email}</span>

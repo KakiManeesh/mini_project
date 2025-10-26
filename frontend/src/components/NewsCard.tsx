@@ -1,5 +1,5 @@
-import { ExternalLink, Calendar, Shield, Eye } from "lucide-react";
-import { useState } from "react";
+import { ExternalLink, Calendar, Shield, Eye, Share2, BookmarkPlus } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NewsCardProps {
   article: {
@@ -26,8 +35,122 @@ interface NewsCardProps {
   };
 }
 
+const API_URL = "http://localhost:5002";
+
 export default function NewsCard({ article }: NewsCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkId, setBookmarkId] = useState<string | null>(null);
+  const { token, isAuthenticated } = useAuth();
+
+  // Check if article is bookmarked
+  useEffect(() => {
+    if (isAuthenticated && token && article.title) {
+      fetch(`${API_URL}/api/bookmarks/check`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ articleTitle: article.title }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          setIsBookmarked(data.isBookmarked);
+          setBookmarkId(data.bookmarkId);
+        })
+        .catch(err => console.error('Check bookmark error:', err));
+    }
+  }, [isAuthenticated, token, article.title]);
+
+  const handleBookmark = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to bookmark articles");
+      return;
+    }
+
+    if (isBookmarked) {
+      // Remove bookmark
+      if (bookmarkId) {
+        try {
+          const response = await fetch(`${API_URL}/api/bookmarks/${bookmarkId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            setIsBookmarked(false);
+            setBookmarkId(null);
+            toast.success("Removed from bookmarks");
+          } else {
+            toast.error("Failed to remove bookmark");
+          }
+        } catch (error) {
+          toast.error("Failed to remove bookmark");
+        }
+      }
+    } else {
+      // Add bookmark
+      try {
+        const response = await fetch(`${API_URL}/api/bookmarks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ article }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setIsBookmarked(true);
+          setBookmarkId(data.bookmark?._id || null);
+          toast.success("Article bookmarked!");
+        } else {
+          toast.error(data.error || "Failed to bookmark article");
+        }
+      } catch (error) {
+        toast.error("Failed to bookmark article");
+      }
+    }
+  };
+
+  // Fallback copy function
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        toast.success("Link copied to clipboard!");
+      } else {
+        toast.error("Failed to copy link");
+      }
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      toast.error("Failed to copy link");
+    }
+  };
 
   const getCredibilityColor = (score: number) => {
     if (score >= 80) return "bg-success text-white";
@@ -57,6 +180,61 @@ export default function NewsCard({ article }: NewsCardProps) {
       day: "numeric",
       year: "numeric"
     });
+  };
+
+  const shareOptions = {
+    twitter: () => {
+      const text = encodeURIComponent(`${article.title} - NewsSense AI`);
+      const url = article.sources[0]?.url || window.location.href;
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`, '_blank');
+      toast.success("Opening Twitter...");
+    },
+    facebook: () => {
+      const url = article.sources[0]?.url || window.location.href;
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+      toast.success("Opening Facebook...");
+    },
+    linkedin: () => {
+      const text = encodeURIComponent(`${article.title} - NewsSense AI`);
+      const url = article.sources[0]?.url || window.location.href;
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${text}`, '_blank');
+      toast.success("Opening LinkedIn...");
+    },
+    whatsapp: () => {
+      const text = encodeURIComponent(`${article.title} - ${article.summary.substring(0, 100)}...`);
+      const url = article.sources[0]?.url || window.location.href;
+      window.open(`https://wa.me/?text=${text}%20${encodeURIComponent(url)}`, '_blank');
+      toast.success("Opening WhatsApp...");
+    },
+    email: () => {
+      const subject = encodeURIComponent(`${article.title} - NewsSense AI`);
+      const body = encodeURIComponent(`${article.title}\n\n${article.summary}\n\nRead more: ${article.sources[0]?.url || window.location.href}`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
+      toast.success("Opening email client...");
+    },
+    copyLink: () => {
+      try {
+        const url = article.sources[0]?.url || window.location.href;
+        console.log('Copying URL:', url); // Debug log
+
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            toast.success("Link copied to clipboard!");
+          }).catch((err) => {
+            console.error('Clipboard API failed:', err);
+            // Fallback for older browsers
+            fallbackCopyToClipboard(url);
+          });
+        } else {
+          // Fallback for older browsers
+          fallbackCopyToClipboard(url);
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        toast.error("Failed to copy link");
+      }
+    }
   };
 
   return (
@@ -124,15 +302,57 @@ export default function NewsCard({ article }: NewsCardProps) {
             <Calendar className="h-4 w-4" />
             <span>{formatDateShort(article.publishedAt)}</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary hover:text-primary/80 font-medium"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            Read More
-          </Button>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={shareOptions.copyLink}>
+                  📋 Copy Link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={shareOptions.twitter}>
+                  🐦 Twitter
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareOptions.facebook}>
+                  📘 Facebook
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareOptions.linkedin}>
+                  💼 LinkedIn
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareOptions.whatsapp}>
+                  💬 WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareOptions.email}>
+                  📧 Email
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`text-muted-foreground hover:text-primary ${isBookmarked ? 'text-primary' : ''}`}
+              onClick={handleBookmark}
+            >
+              <BookmarkPlus className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary/80 font-medium"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Read More
+            </Button>
+          </div>
         </CardFooter>
       </Card>
 
@@ -225,16 +445,48 @@ export default function NewsCard({ article }: NewsCardProps) {
               </div>
             </div>
 
-            {/* Article Metadata */}
+            {/* Share Section */}
             <div className="border-t pt-4">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>Published on {formatDate(article.publishedAt)}</span>
                 </div>
-                <div className="text-right">
-                  <p>Analysis by NewsSense AI</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Share this article:</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={shareOptions.copyLink}>
+                        📋 Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={shareOptions.twitter}>
+                        🐦 Twitter
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareOptions.facebook}>
+                        📘 Facebook
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareOptions.linkedin}>
+                        💼 LinkedIn
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareOptions.whatsapp}>
+                        💬 WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={shareOptions.email}>
+                        📧 Email
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+              </div>
+              <div className="text-right mt-2">
+                <p className="text-sm text-muted-foreground">Analysis by NewsSense AI</p>
               </div>
             </div>
           </div>

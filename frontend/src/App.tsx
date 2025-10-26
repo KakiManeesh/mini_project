@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import Auth from "./pages/Auth";
+import Bookmarks from "./pages/Bookmarks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/bookmarks" element={<Bookmarks />} />
                 {/* Category Routes */}
                 {categories.map((category) => (
                   <Route
