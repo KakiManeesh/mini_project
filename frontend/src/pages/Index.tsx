@@ -4,6 +4,7 @@ import Hero from "@/components/Hero";
 import NewsCard from "@/components/NewsCard";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRegion } from "@/hooks/use-region";
 
 interface Article {
   title: string;
@@ -20,11 +21,12 @@ interface Article {
 export default function Index() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { region } = useRegion();
 
   // Fetch top news on component mount
   useEffect(() => {
     handleSearch("latest", "general");
-  }, []);
+  }, [region]);
 
   const handleSearch = async (query: string, category: string) => {
     setIsLoading(true);
@@ -36,7 +38,7 @@ export default function Index() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query, category }),
+        body: JSON.stringify({ query, category, region }),
       });
 
       if (!response.ok) {
@@ -51,9 +53,9 @@ export default function Index() {
       } else {
         toast.info("No articles found for this search");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Search error:", error);
-      toast.error(error.message || "Failed to fetch news");
+      toast.error(error instanceof Error ? error.message : "Failed to fetch news");
     } finally {
       setIsLoading(false);
     }
@@ -66,20 +68,26 @@ export default function Index() {
       
       <main className="container mx-auto px-4 py-12">
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">
-              Analyzing news from multiple sources...
-            </p>
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="relative">
+              <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              <div className="absolute inset-0 h-16 w-16 animate-ping rounded-full bg-primary/20"></div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">Analyzing Latest News</h3>
+              <p className="text-muted-foreground">
+                AI is processing articles from multiple sources for accuracy and credibility...
+              </p>
+            </div>
           </div>
         )}
 
         {!isLoading && articles.length > 0 && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="text-center">
-              <h2 className="text-3xl font-bold">AI-Verified Results</h2>
-              <p className="mt-2 text-muted-foreground">
-                {articles.length} articles analyzed and verified
+              <h2 className="text-3xl font-bold mb-2">Latest AI-Verified News</h2>
+              <p className="text-muted-foreground">
+                {articles.length} articles analyzed and verified by AI for accuracy and credibility
               </p>
             </div>
 
@@ -87,6 +95,23 @@ export default function Index() {
               {articles.map((article, idx) => (
                 <NewsCard key={idx} article={article} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {!isLoading && articles.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">No News Found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try searching for a different topic or check your internet connection.
+              </p>
+              <button
+                onClick={() => handleSearch("latest", "general")}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Refresh News
+              </button>
             </div>
           </div>
         )}

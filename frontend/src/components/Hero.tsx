@@ -40,14 +40,14 @@ export default function Hero({ onSearch, isLoading }: HeroProps) {
           <Newspaper className="h-5 w-5 text-primary" />
           <span className="text-sm font-medium text-primary">AI-Powered News Intelligence</span>
         </div>
-        
+
         <h1 className="mb-4 text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
           Discover Truth in <br />
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Every Story
           </span>
         </h1>
-        
+
         <p className="mb-10 text-lg text-muted-foreground sm:text-xl">
           AI-verified news summaries with credibility scores from multiple sources
         </p>
@@ -63,7 +63,7 @@ export default function Hero({ onSearch, isLoading }: HeroProps) {
                 required
               />
             </div>
-            
+
             <Select name="category" defaultValue="technology">
               <SelectTrigger className="h-12 w-full sm:w-[180px]">
                 <SelectValue placeholder="Category" />
@@ -78,9 +78,9 @@ export default function Hero({ onSearch, isLoading }: HeroProps) {
             </Select>
           </div>
 
-          <Button 
-            type="submit" 
-            size="lg" 
+          <Button
+            type="submit"
+            size="lg"
             className="w-full sm:w-auto"
             disabled={isLoading}
           >
